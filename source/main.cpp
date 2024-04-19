@@ -15,13 +15,16 @@
 // ROW4 = P0.24 [AC20]
 // ROW5 = P0.19 [A14]
 
+// All of the following information is taken directly from the nRF52833 Objective Product Specification v0.7
 #define GPIO0_BASE   0x50000000
 #define GPIO1_BASE   0x50000300
 
+#define GPIO0_OUT (*(volatile unsigned int *)(GPIO0_BASE + 0x504))
 #define GPIO0_OUTSET (*(volatile unsigned int *)(GPIO0_BASE + 0x508))
 #define GPIO0_OUTCLR (*(volatile unsigned int *)(GPIO0_BASE + 0x50C))
 #define GPIO0_DIRSET (*(volatile unsigned int *)(GPIO0_BASE + 0x518))
 
+#define GPIO1_OUT (*(volatile unsigned int *)(GPIO1_BASE + 0x504))
 #define GPIO1_OUTSET (*(volatile unsigned int *)(GPIO1_BASE + 0x508))
 #define GPIO1_OUTCLR (*(volatile unsigned int *)(GPIO1_BASE + 0x50C))
 #define GPIO1_DIRSET (*(volatile unsigned int *)(GPIO1_BASE + 0x518))
@@ -40,6 +43,41 @@ void turnOn() {
 
     // Turn on LEDs by setting GPIO1 column low
     GPIO1_OUTCLR = (1 << 5);  // Set column 4 low
+}
+
+// Arrays to map rows and columns to their respective GPIO pins
+int columnPins[] = {28, 11, 31, 5, 30};  // Pins for columns 1-5
+int rowPins[] = {21, 22, 15, 24, 19};    // Pins for rows 1-5
+
+
+// TODO: Implement a function to turn on a specific LED
+// Current problem: it doesn't work
+void turnOnLED(int row, int column) {
+    int i;
+
+    // First, ensure all rows are low to prevent other LEDs from lighting up
+    for (i = 0; i < 5; i++) {
+        GPIO0_OUTCLR = (1 << rowPins[i]);
+    }
+
+    // Then, ensure all columns are high (because common cathode - low activates the LED)
+    for (i = 0; i < 5; i++) {
+        if (i == 3) { // Column 4 is on GPIO1
+            GPIO1_OUTSET = (1 << columnPins[i]);
+        } else {
+            GPIO0_OUTSET = (1 << columnPins[i]);
+        }
+    }
+
+    // Now activate the selected row (set high)
+    GPIO0_OUTSET = (1 << rowPins[row - 1]);
+
+    // And activate the selected column by setting it low
+    if (column == 4) { // Column 4 is on GPIO1
+        GPIO1_OUTCLR = (1 << columnPins[column - 1]);
+    } else {
+        GPIO0_OUTCLR = (1 << columnPins[column - 1]);
+    }
 }
 
 int main() {
