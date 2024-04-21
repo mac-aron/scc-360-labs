@@ -1,4 +1,4 @@
-// The following imports are for debugging only
+// Library imports for debugging only
 #include "MicroBit.h"
 NRF52Pin usbTx(ID_PIN_USBTX, MICROBIT_PIN_UART_TX, PIN_CAPABILITY_DIGITAL);
 NRF52Pin usbRx(ID_PIN_USBRX, MICROBIT_PIN_UART_RX, PIN_CAPABILITY_DIGITAL);
@@ -8,27 +8,35 @@ NRF52Serial serial(usbTx, usbRx, NRF_UARTE0);
 // Using the onboard 5x5 LED matrix means I need to use different GPIO pins than the ones specified in the task description.
 // All of the following information is taken directly from the nRF52833 Objective Product Specification v0.7
 
+// Columns and rows for the LED matrix, for information
 // COL1 = P0.28 [B11]
 // COL2 = P0.11 [T2]
 // COL3 = P0.31 [A8]
 // COL4 = P1.05 [A16]
 // COL5 = P0.30 [B9]
-
 // ROW1 = P0.21 [AC17]
 // ROW2 = P0.22 [AD18]
 // ROW3 = P0.15 [AD10]
 // ROW4 = P0.24 [AC20]
 // ROW5 = P0.19 [A14]
 
-// GPIO base addresses
-#define GPIO0_BASE   0x50000000   // P0.00 - P0.31
-#define GPIO1_BASE   0x50000300   // P1.00 - P1.09
+// Pin numbers for the buttons A and B on the micro:bit
+#define BTN_A 14
+#define BTN_B 23
 
+// GPIO base addresses
+#define GPIO0_BASE 0x50000000   // P0.00 - P0.31
+#define GPIO1_BASE 0x50000300   // P1.00 - P1.09
+
+// GPIO port 1 registers
 #define GPIO0_OUT (*(volatile unsigned int *)(GPIO0_BASE + 0x504))
 #define GPIO0_OUTSET (*(volatile unsigned int *)(GPIO0_BASE + 0x508))
+#define GPIO0_IN (*(volatile unsigned int *)(GPIO0_BASE + 0x510))
 #define GPIO0_OUTCLR (*(volatile unsigned int *)(GPIO0_BASE + 0x50C))
 #define GPIO0_DIRSET (*(volatile unsigned int *)(GPIO0_BASE + 0x518))
+#define GPIO0_DIRCLR (*(volatile unsigned int *)(GPIO0_BASE + 0x51C))
 
+// GPIO port 2 registers
 #define GPIO1_OUT (*(volatile unsigned int *)(GPIO1_BASE + 0x504))
 #define GPIO1_OUTSET (*(volatile unsigned int *)(GPIO1_BASE + 0x508))
 #define GPIO1_OUTCLR (*(volatile unsigned int *)(GPIO1_BASE + 0x50C))
@@ -193,23 +201,10 @@ void flashLED(int flashes, float waitTime) {
  * 
  * This is representative of Task 3 on Excercise 1
  * 
- * 
  * @param None
  * @return None
  */
 void rollingCounter() {
-    int displayPins[16] = {
-        // Assuming use of the first two rows (1-based index for row and column)
-        rowPins[0], columnPins[0], // Bit 0
-        rowPins[0], columnPins[1], // Bit 1
-        rowPins[0], columnPins[2], // Bit 2
-        rowPins[0], columnPins[3], // Bit 3
-        rowPins[1], columnPins[0], // Bit 4
-        rowPins[1], columnPins[1], // Bit 5
-        rowPins[1], columnPins[2], // Bit 6
-        rowPins[1], columnPins[3]  // Bit 7
-    };
-
     while (true) {
         for (int count = 0; count < 256; count++) {
             resetMatrix(); // Clear the matrix at the start of each count
@@ -220,9 +215,75 @@ void rollingCounter() {
                     turnOnLED(row, column);
                 }
             }
-            serial.printf("Count: %d\n", count);
             delay(0.117); // Approximately 117ms per number to complete 30 seconds for the full range 0-255
         }
+    }
+}
+
+/**
+ * @brief Displays a "Knight Rider" pattern on the LED matrix.
+ *
+ * Uses a one pointer system, and a direction variable. The pointer moves right, 
+ * and when reaches index 4 (the end of the array), it changes direction to left.
+ * When it reaches index 0, it changes direction to right.
+ * 
+ * This is representative of Task 4 on Excercise 1
+ * 
+ * @param None
+ * @return None
+ */
+void knightRider() {
+    int pattern[5] = {0, 0, 0, 0, 0};  // Initial pattern
+    int direction = 1;  // Direction of movement (1 = right, -1 = left)
+    int position = 0;   // Current position of the light
+
+    while (true) {
+        resetMatrix();
+        pattern[position] = 1;  // Turn on the LED at the current position
+        displayTopRow(pattern);  // Display the pattern
+        delay(0.25);  // Delay for half a second
+
+        pattern[position] = 0;  // Turn off the LED at the current position
+        position += direction;  // Move the light
+        if (position == 4) {  // If the light reaches the rightmost position
+            direction = -1;   // Change direction to left
+        } else if (position == 0) {  // If the light reaches the leftmost position
+            direction = 1;  // Change direction to right
+        }
+    }
+}
+
+// Function to read button state (returns 1 if pressed, 0 if not)
+int readButton(int pin) {
+    return (GPIO0_IN & (1 << pin)) == 0; // Set up for a pull-down configuration (set to 1 for pull-up)
+}
+
+void lightUpLEDOnButtonPress() {
+    GPIO0_DIRCLR = (1 << BTN_A);
+
+    while (true) {
+        if (readButton(BTN_A)) {  // Check if button A is pressed
+            turnOnLED(1, 1);  // Turn on the LED at position (1,1)
+        } else {
+            resetMatrix();
+        }
+    }
+}
+
+void countClicks() {
+    GPIO0_DIRCLR = (1 << BTN_A) | (1 << BTN_B);
+    int count = 0;
+    int lastStateA = readButton(BTN_A);
+
+    while (true) {
+        int currentStateA = readButton(BTN_A);
+        serial.printf("Current state: %d\n", currentStateA);
+        if (currentStateA != lastStateA && currentStateA == 1) { // Button A press detected
+            count++; // Increment count on rising edge
+            serial.printf("Count: %d\n", count);
+            delay(0.05); // Debounce after detecting a press
+        }
+        lastStateA = currentStateA; // Update last state
     }
 }
 
@@ -231,7 +292,7 @@ int main() {
     resetMatrix();  // Ensure all LEDs are initially off
     
     // All user code
-    rollingCounter();
+    lightUpLEDOnButtonPress();
 
     while(true);
 }
