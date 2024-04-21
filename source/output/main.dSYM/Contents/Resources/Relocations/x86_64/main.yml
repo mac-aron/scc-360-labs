@@ -1,0 +1,14 @@
+---
+triple:          'x86_64-apple-darwin'
+binary-path:     '/Users/aroneggens/Desktop/Embedded Systems course/microbit-v2-samples/source/output/main'
+relocations:
+  - { offsetInCU: 0x26, offset: 0x26, size: 0x8, addend: 0x0, symName: __Z20setDirectionToOutputv, symObjAddr: 0x0, symBinAddr: 0x100000CC0, symSize: 0x30 }
+  - { offsetInCU: 0x3F, offset: 0x3F, size: 0x8, addend: 0x0, symName: _columnPins, symObjAddr: 0x270, symBinAddr: 0x100002000, symSize: 0x0 }
+  - { offsetInCU: 0x6E, offset: 0x6E, size: 0x8, addend: 0x0, symName: _rowPins, symObjAddr: 0x290, symBinAddr: 0x100002020, symSize: 0x0 }
+  - { offsetInCU: 0x7E, offset: 0x7E, size: 0x8, addend: 0x0, symName: __Z20setDirectionToOutputv, symObjAddr: 0x0, symBinAddr: 0x100000CC0, symSize: 0x30 }
+  - { offsetInCU: 0x97, offset: 0x97, size: 0x8, addend: 0x0, symName: __Z13turnOnAllLEDsv, symObjAddr: 0x30, symBinAddr: 0x100000CF0, symSize: 0x30 }
+  - { offsetInCU: 0xB0, offset: 0xB0, size: 0x8, addend: 0x0, symName: __Z11resetMatrixv, symObjAddr: 0x60, symBinAddr: 0x100000D20, symSize: 0x50 }
+  - { offsetInCU: 0xD8, offset: 0xD8, size: 0x8, addend: 0x0, symName: __Z9turnOnLEDii, symObjAddr: 0xB0, symBinAddr: 0x100000D70, symSize: 0x100 }
+  - { offsetInCU: 0x11C, offset: 0x11C, size: 0x8, addend: 0x0, symName: __Z13displayMatrixPKi, symObjAddr: 0x1B0, symBinAddr: 0x100000E70, symSize: 0x80 }
+  - { offsetInCU: 0x17C, offset: 0x17C, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x230, symBinAddr: 0x100000EF0, symSize: 0x3C }
+...
