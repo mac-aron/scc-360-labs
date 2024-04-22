@@ -273,14 +273,13 @@ void checkButtonPress() {
     setupGPIOTE();  // Setup GPIOTE to generate an event when BTN_A is pressed
     GPIO0_DIRCLR = (1 << BTN_A);  // Set BTN_A pin as input
 
-    while(true) {
-        if (GPIOTE_EVENTS_IN0 != 0) {
-            turnOnLED(1, 1);  // Turn on the LED at position (1,1)
-            GPIOTE_EVENTS_IN0 = 0; // Clear the event
-        } else {
-            resetMatrix();
-        }
-    };
+    if (GPIOTE_EVENTS_IN0 != 0) {
+        turnOnLED(1, 1);  // Turn on the LED at position (1,1)
+        GPIOTE_EVENTS_IN0 = 0; // Clear the event
+    } else {
+        resetMatrix();
+    }
+
 }
 
 int main() {
@@ -290,5 +289,7 @@ int main() {
     // User code below
     
 
-    while(true);
+    while(true){
+        checkButtonPress();
+    };
 }
