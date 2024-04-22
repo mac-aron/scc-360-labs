@@ -31,7 +31,6 @@ NRF52Serial serial(usbTx, usbRx, NRF_UARTE0);
 // GPIO port 1 registers
 #define GPIO0_OUT (*(volatile unsigned int *)(GPIO0_BASE + 0x504))
 #define GPIO0_OUTSET (*(volatile unsigned int *)(GPIO0_BASE + 0x508))
-#define GPIO0_IN (*(volatile unsigned int *)(GPIO0_BASE + 0x510))
 #define GPIO0_OUTCLR (*(volatile unsigned int *)(GPIO0_BASE + 0x50C))
 #define GPIO0_DIRSET (*(volatile unsigned int *)(GPIO0_BASE + 0x518))
 #define GPIO0_DIRCLR (*(volatile unsigned int *)(GPIO0_BASE + 0x51C))
@@ -41,6 +40,13 @@ NRF52Serial serial(usbTx, usbRx, NRF_UARTE0);
 #define GPIO1_OUTSET (*(volatile unsigned int *)(GPIO1_BASE + 0x508))
 #define GPIO1_OUTCLR (*(volatile unsigned int *)(GPIO1_BASE + 0x50C))
 #define GPIO1_DIRSET (*(volatile unsigned int *)(GPIO1_BASE + 0x518))
+
+// Task and event registers
+#define GPIOTE_BASE 0x40006000 // Base address for GPIOTE registers
+#define GPIOTE_CONFIG0 (*(volatile unsigned int *)(GPIOTE_BASE + 0x510)) // Config register for channel 0
+#define GPIOTE_INTENSET (*(volatile unsigned int *)(GPIOTE_BASE + 0x304)) // Interrupt enable set register
+#define GPIOTE_EVENTS_IN0 (*(volatile unsigned int *)(GPIOTE_BASE + 0x100)) // Event register for channel 0
+
 
 // Arrays to map rows and columns to their respective GPIO pins
 int columnPins[] = {28, 11, 31, 5, 30};  // Pins for columns 1-5
@@ -56,7 +62,7 @@ int rowPins[] = {21, 22, 15, 24, 19};    // Pins for rows 1-5
  */
 void delay(float duration) {
 
-    float iterations = 5500000;  // 64 MHz
+    float iterations = 5500000;  // 5.5 million 
     duration *= iterations;      // Convert seconds to total loop iterations
 
     for (volatile int i = 0; i < duration; i++) {
@@ -82,6 +88,16 @@ void setDirectionToOutput() {
 
     // Set direction of GPIO1 pin to output (Column 4)
     GPIO1_DIRSET = (1 << 5);  // Column 4 as output
+}
+
+void setupGPIOTE() {
+    // Configure GPIOTE channel 0 to generate an event when BTN_A is low
+    GPIOTE_CONFIG0 = (1 << 0) |     // Mode: Event
+                     (BTN_A << 8) | // Pin select
+                     (2 << 16) |    // Polarity: HiToLo (high to low transition)
+                     (3 << 20);     // Pull-up configuration
+
+    GPIOTE_INTENSET = (1 << 0);     // Enable interrupt for channel 0
 }
     
 /**
@@ -253,46 +269,26 @@ void knightRider() {
     }
 }
 
-// Function to read button state (returns 1 if pressed, 0 if not)
-int readButton(int pin) {
-    return (GPIO0_IN & (1 << pin)) == 0; // Set up for a pull-down configuration (set to 1 for pull-up)
-}
+void checkButtonPress() {
+    setupGPIOTE();  // Setup GPIOTE to generate an event when BTN_A is pressed
+    GPIO0_DIRCLR = (1 << BTN_A);  // Set BTN_A pin as input
 
-void lightUpLEDOnButtonPress() {
-    GPIO0_DIRCLR = (1 << BTN_A);
-
-    while (true) {
-        if (readButton(BTN_A)) {  // Check if button A is pressed
+    while(true) {
+        if (GPIOTE_EVENTS_IN0 != 0) {
             turnOnLED(1, 1);  // Turn on the LED at position (1,1)
+            GPIOTE_EVENTS_IN0 = 0; // Clear the event
         } else {
             resetMatrix();
         }
-    }
-}
-
-void countClicks() {
-    GPIO0_DIRCLR = (1 << BTN_A) | (1 << BTN_B);
-    int count = 0;
-    int lastStateA = readButton(BTN_A);
-
-    while (true) {
-        int currentStateA = readButton(BTN_A);
-        serial.printf("Current state: %d\n", currentStateA);
-        if (currentStateA != lastStateA && currentStateA == 1) { // Button A press detected
-            count++; // Increment count on rising edge
-            serial.printf("Count: %d\n", count);
-            delay(0.05); // Debounce after detecting a press
-        }
-        lastStateA = currentStateA; // Update last state
-    }
+    };
 }
 
 int main() {
     setDirectionToOutput();
     resetMatrix();  // Ensure all LEDs are initially off
     
-    // All user code
-    lightUpLEDOnButtonPress();
+    // User code below
+    
 
     while(true);
 }
