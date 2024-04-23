@@ -1,5 +1,8 @@
 #include "MicroBit.h"
 #include "nrf_timer.h"
+// #include <nrf52.h> // problematic!
+#include <nrf52_bitfields.h>
+// #include <core_cm4.h>
 
 // Library imports for debugging only
 NRF52Pin usbTx(ID_PIN_USBTX, MICROBIT_PIN_UART_TX, PIN_CAPABILITY_DIGITAL);
@@ -22,7 +25,7 @@ NRF52Serial serial(usbTx, usbRx, NRF_UARTE0);
  *  ROW5 = P0.19 [A14]
 */
 
-// Arrays to map rows and columns to their respective GPIO pins
+// Arrays to map rows and columns to their respective GPIO pins 
 const int COL_PINS[] = {28, 11, 31, 5, 30};   // P0.28, P0.11, P0.31, P1.05, P0.30
 const int ROW_PINS[] = {21, 22, 15, 24, 19};  // P0.21, P0.22, P0.15, P0.24, P0.19
 
@@ -56,6 +59,91 @@ int SMILEY_PATTERN[25] = {
     0, 1, 1, 1, 0
 };
 
+int ZERO[25] = {
+    0, 1, 1, 1, 0,
+    1, 0, 0, 0, 1,
+    1, 0, 0, 0, 1,
+    1, 0, 0, 0, 1,
+    0, 1, 1, 1, 0
+};
+
+int ONE[25] = {
+    0, 1, 1, 0, 0,
+    0, 0, 1, 0, 0,
+    0, 0, 1, 0, 0,
+    0, 0, 1, 0, 0,
+    0, 1, 1, 1, 0
+};
+
+int TWO[25] = {
+    0, 1, 1, 0, 0,
+    1, 0, 0, 1, 0,
+    0, 0, 1, 0, 0,
+    0, 1, 0, 0, 0,
+    1, 1, 1, 1, 0
+};
+
+int THREE[25] = {
+    1, 1, 1, 1, 0,
+    0, 0, 0, 1, 0,
+    0, 1, 1, 1, 0,
+    0, 0, 0, 1, 0,
+    1, 1, 1, 1, 0
+};
+
+int FOUR[25] = {
+    1, 0, 0, 1, 0,
+    1, 0, 0, 1, 0,
+    1, 1, 1, 1, 0,
+    0, 0, 0, 1, 0,
+    0, 0, 0, 1, 0
+};
+
+int FIVE[25] = {
+    0, 1, 1, 1, 0,
+    1, 0, 0, 0, 0,
+    1, 1, 1, 1, 0,
+    0, 0, 0, 1, 0,
+    1, 1, 1, 1, 0
+};
+
+int SIX[25] = {
+    1, 1, 1, 1, 0,
+    1, 0, 0, 0, 0,
+    1, 1, 1, 1, 0,
+    1, 0, 0, 1, 0,
+    1, 1, 1, 1, 0
+};
+
+int SEVEN[25] = {
+    1, 1, 1, 1, 0,
+    0, 0, 0, 1, 0,
+    0, 0, 1, 0, 0,
+    0, 1, 0, 0, 0,
+    1, 0, 0, 0, 0
+};
+
+int EIGHT[25] = {
+    1, 1, 1, 1, 0,
+    1, 0, 0, 1, 0,
+    0, 1, 1, 0, 0,
+    1, 0, 0, 1, 0,
+    1, 1, 1, 1, 0
+};
+
+int NINE[25] = {
+    1, 1, 1, 1, 0,
+    1, 0, 0, 1, 0,
+    1, 1, 1, 1, 0,
+    0, 0, 0, 1, 0,
+    1, 1, 1, 1, 0
+};
+
+// Array of number patterns
+int* numberPatterns[10] = {
+    ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE
+};
+
 /**
  * @brief Simple busy-wait delay function NOT using a hardware timer.
  * 
@@ -78,53 +166,56 @@ void busyWaitTimer(int duration) {
  */
 void hardwareTimer(int duration) {
     // Ensure the timer is stopped and reset
-    NRF_TIMER1->TASKS_STOP = 1;  // Stop the timer
-    NRF_TIMER1->TASKS_CLEAR = 1; // Clear the timer
+    NRF_TIMER0->TASKS_STOP = 1;  // Stop the timer
+    NRF_TIMER0->TASKS_CLEAR = 1; // Clear the timer
 
     // Configure the timer
-    NRF_TIMER1->MODE = NRF_TIMER_MODE_TIMER;           // Set the timer to Timer Mode
-    NRF_TIMER1->BITMODE = NRF_TIMER_BIT_WIDTH_32; // Set the timer to 32-bit mode
-    NRF_TIMER1->PRESCALER = 4;                     // Set prescaler to 4 for 1MHz (1 tick = 1 microsecond)
+    NRF_TIMER0->MODE = NRF_TIMER_MODE_TIMER;      // Set the timer to Timer Mode
+    NRF_TIMER0->BITMODE = NRF_TIMER_BIT_WIDTH_32; // Set the timer to 32-bit mode
+    NRF_TIMER0->PRESCALER = 4;                    // Set prescaler to 4 for 1MHz (1 tick = 1 microsecond)
 
     // Prepare compare event
-    NRF_TIMER1->CC[0] = duration * 1000;           // Set up compare register for duration in microseconds
-    NRF_TIMER1->EVENTS_COMPARE[0] = 0;             // Clear compare event register
+    NRF_TIMER0->EVENTS_COMPARE[0] = 0;            // Clear compare event register
+    NRF_TIMER0->CC[0] = duration * 1000;          // Set up compare register for duration in microseconds
 
-    // Start the timer
-    NRF_TIMER1->TASKS_START = 1;                   // Start the timer
+    // Start timer
+    NRF_TIMER0->TASKS_START = 1;
 
     // Wait for compare event
-    while (NRF_TIMER1->EVENTS_COMPARE[0] == 0) {
+    while (NRF_TIMER0->EVENTS_COMPARE[0] == 0) {
         // Wait here until the compare event fires
     }
 
     // Cleanup
-    NRF_TIMER1->EVENTS_COMPARE[0] = 0;             // Clear the event
-    NRF_TIMER1->TASKS_STOP = 1;                    // Stop the timer
+    NRF_TIMER0->EVENTS_COMPARE[0] = 0;            // Clear the event
+    NRF_TIMER0->TASKS_STOP = 1;                   // Stop the timer
 }
 
-void hardwareTimerWithInterrupt(){
+
+/**
+ * @brief Configures and starts a hardware timer with interrupt.
+ * 
+ * @param duration The duration of the timer in milliseconds.
+ * @return None
+ */
+void hardwareTimerWithInterrupt(int duration){
     // Ensure the timer is stopped and reset
     NRF_TIMER1->TASKS_STOP = 1;  // Stop the timer
     NRF_TIMER1->TASKS_CLEAR = 1; // Clear the timer
 
     // Configure the timer
-    NRF_TIMER1->MODE = NRF_TIMER_MODE_TIMER;           // Set the timer to Timer Mode
+    NRF_TIMER1->MODE = NRF_TIMER_MODE_TIMER;      // Set the timer to Timer Mode
     NRF_TIMER1->BITMODE = NRF_TIMER_BIT_WIDTH_32; // Set the timer to 32-bit mode
-    NRF_TIMER1->PRESCALER = 4;                     // Set prescaler to 4 for 1MHz (1 tick = 1 microsecond)
-
-    // Prepare compare event
-    NRF_TIMER1->CC[0] = 1000;           // Set up compare register for duration in microseconds
-    NRF_TIMER1->EVENTS_COMPARE[0] = 0;             // Clear compare event register
+    NRF_TIMER1->PRESCALER = 4;                    // Set prescaler to 4 for 1MHz (1 tick = 1 microsecond)
 
     // Enable interrupt
-    NRF_TIMER1->INTENSET = TIMER_INTENSET_COMPARE0_Msk; // Enable interrupt for compare event
-    NVIC_EnableIRQ(TIMER1_IRQn);                         // Enable the interrupt in the NVIC
+    NRF_TIMER1->INTENSET = TIMER_INTENSET_COMPARE1_Msk; // Enable interrupt for compare event
+    NVIC_EnableIRQ(TIMER1_IRQn);                        // Enable the interrupt in the NVIC
 
     // Start the timer
-    NRF_TIMER1->TASKS_START = 1;                   // Start the timer
-
+    NRF_TIMER1->TASKS_START = 1;                
 }
+
 
 /**
  * @brief Initialises the micro:bit LED matrix.
@@ -262,9 +353,11 @@ void turnOffLED(int row, int column){
  *  register writes.
  * 
  * @param image A 25-element array with 0s and 1s representing the LED states.
+ * @param timerFunction The timer function to use for the delays.
  * @return None
  */
 void displayImage(int image[25], void (*timerFunction)(int delay)) {
+    clearMatrix();  // Clear the matrix before displaying the image
     while(true){
         for (int row = 1; row <= 5; row++) {  // Loop over each row (1-based index)
             clearRow(row);  // Clear the previous state of this row
@@ -282,44 +375,57 @@ void displayImage(int image[25], void (*timerFunction)(int delay)) {
 }
 
 /**
- * @brief Task 1 on Exercise 1.
- * 
- * Display a smiley face on the LED matrix, and use a busy wait timer.
+ * @brief Task 1 on lab 2. Display a smiley face on the LED matrix, and 
+ * use a busy wait timer.
  * 
  * @param None
  * @return None
  */
 void beHappy(){
-    initialiseMatrixGPIO();
-    clearMatrix();
+    initialiseMatrixGPIO(); // Initialise the GPIO pins for the LED matrix
     displayImage(SMILEY_PATTERN, busyWaitTimer);
 }
 
 /**
- * @brief Task 2 on Exercise 1.
- * 
- * Display a smiley face on the LED matrix, and use a hardware timer.
+ * @brief Task 2 on lab 2. Display a smiley face on the LED matrix, and 
+ * use a hardware timer.
  * 
  * @param None
  * @return None
  */
 void beVeryHappy(){
-    initialiseMatrixGPIO();
-    clearMatrix();
+    initialiseMatrixGPIO(); // Initialise the GPIO pins for the LED matrix
     displayImage(SMILEY_PATTERN, hardwareTimer);
 }
 
 /**
- * @brief Task 2 on Exercise 1.
- * 
- * Display a smiley face on the LED matrix, and use a hardware timer.
+ * @brief Task 3 on lab 2. Display a smiley face on the LED matrix, and use 
+ * a hardware timer with an interrupt.
  * 
  * @param None
  * @return None
  */
+void beHappyAndFree(){
+    initialiseMatrixGPIO(); // Initialise the GPIO pins for the LED matrix
+    displayImage(SMILEY_PATTERN, hardwareTimerWithInterrupt);
+}
+
+/**
+ * @brief Task 4 on lab 2. Display a smiley face on the LED matrix, and 
+ * use a hardware timer with an interrupt.
+ * 
+ * @param None
+ * @return None
+ */
+void showNumber(int number){
+    initialiseMatrixGPIO(); // Initialise the GPIO pins for the LED matrix
+    displayImage(numberPatterns[number], hardwareTimerWithInterrupt);
+}
 
 int main() {
-    // beHappy(); // Task 1
-    beVeryHappy(); // Task 2
+    beHappy();        // Task 1
+    // beVeryHappy();    // Task 2
+    // beHappyAndFree(); // Task 3
+    // showNumber(6);    // Task 4
     while(true);
 }
